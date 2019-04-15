@@ -14,6 +14,10 @@ public class Contants {
 	
 	public static String[] STRUCTURE_IDS;
 	
+	public static String[] JOURNAL_HOTEL;
+	
+	public static String[] JOURNAL_RATES;
+	
 	public static String[] DLFILEENTRY_BASE;
 	
 			public static String getLanguaje(){
