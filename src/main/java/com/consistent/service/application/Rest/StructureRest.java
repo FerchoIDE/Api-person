@@ -51,7 +51,7 @@ public class StructureRest {
 							  @QueryParam("mime_type") String mime_type) throws PortalException {
     log.info(groupId + brand+ mime_type+ code_hotel);
    
-    return  _services.getListJournalFolders(groupId, brand, code_hotel).toString();	
+    return  _services.getFilesByName(groupId, brand,mime_type, code_hotel).toString();	
 	}
 	
 	@GET
