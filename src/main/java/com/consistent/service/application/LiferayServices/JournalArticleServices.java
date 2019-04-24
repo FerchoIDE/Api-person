@@ -738,8 +738,6 @@ public class JournalArticleServices {
 	
 	public boolean validStructure(Long id){
 		for (String structureID : Contants.STRUCTURE_IDS) {
-			log.info("structure id uno: "+structureID);
-			log.info("structure id dos: "+id);
 			if(structureID.equals(String.valueOf(id))) return true;
 		}
 		return false;
@@ -754,7 +752,6 @@ public class JournalArticleServices {
         List<DDMStructure> structures = DDMStructureLocalServiceUtil.dynamicQuery(query);
         List<DDMStructure> valid_structures = new ArrayList<DDMStructure>();
         for (DDMStructure ddmStructure : structures) {
-        log.info(ddmStructure);
         	if(validStructure(ddmStructure.getStructureId())){
         		valid_structures.add(ddmStructure);
         	}
@@ -821,7 +818,7 @@ public class JournalArticleServices {
 			else{
 			 idFolder= DLFolderLocalServiceUtil.getFolder(groupId, idFolder.getFolderId(), baseFileEntry);
 			}
-			log.info(idFolder.getName()+"id:"+idFolder.getFolderId());
+			log .info(idFolder.getName()+"id:"+idFolder.getFolderId());
 			}
 		return idFolder.getFolderId();
 	}

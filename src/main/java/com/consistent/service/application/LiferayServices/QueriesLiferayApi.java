@@ -3,6 +3,7 @@ package com.consistent.service.application.LiferayServices;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 import org.osgi.service.component.annotations.Activate;
@@ -13,8 +14,12 @@ import com.liferay.document.library.kernel.model.DLFileEntry;
 import com.liferay.document.library.kernel.model.DLFolder;
 import com.liferay.document.library.kernel.service.DLFileEntryLocalServiceUtil;
 import com.liferay.document.library.kernel.service.DLFolderLocalServiceUtil;
+import com.liferay.dynamic.data.mapping.model.DDMForm;
+import com.liferay.dynamic.data.mapping.model.DDMFormField;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalServiceUtil;
+import com.liferay.dynamic.data.mapping.storage.Fields;
+import com.liferay.dynamic.data.mapping.util.DDMUtil;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.journal.model.JournalFolder;
 import com.liferay.journal.model.impl.JournalArticleImpl;
@@ -31,9 +36,14 @@ import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.json.JSONArray;
+import com.liferay.portal.kernel.json.JSONException;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
+import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
+import com.liferay.portal.kernel.util.PwdGenerator;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 public class QueriesLiferayApi {
@@ -129,6 +139,11 @@ public class QueriesLiferayApi {
 		}
 		return listIdFolders.get(0);
 	}
+
+public JournalArticle copyJorunal(Long userId,Long groupId,String oldArticleId,String newArticleId) throws PortalException{
+	return JournalArticleLocalServiceUtil.copyArticle(userId, groupId, oldArticleId, newArticleId, true, 1.0);
+
+}	
 	
 public List<JournalFolder> getSubFolderByJournalFolderParent(Long groupId,Long idFolder){
 	    List<JournalFolder> dlFolders = JournalFolderLocalServiceUtil.getFolders(groupId, idFolder);
@@ -340,6 +355,192 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 	}
 	
 	
+	
+	/*public String validateType(){
+		
+	}*/
+	
+	
+	public String parseJsonToXML(long ddmStructureId) throws PortalException{
+		DDMStructure ddmStructure = DDMStructureLocalServiceUtil.getStructure(
+				ddmStructureId);
+		String definition = ddmStructure.getDefinition();
+		JSONObject jsonObj = JSONFactoryUtil.createJSONObject(definition);
+		JSONArray campos = jsonObj.getJSONArray("fields");
+		System.out.println("Tamaño: "+campos.length());
+		String xmlFinal = "";
+		for (int i = 0; i < campos.length(); i++) {
+			if(campos.getJSONObject(i).get("nestedFields")!=null){
+				if(campos.getJSONObject(i).get("type").equals("ddm-separator")){
+					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+							"selection_break",
+							"",
+							readJson(campos.getJSONObject(i).get("nestedFields").toString()));
+		
+				}
+				else{
+				
+				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+						campos.getJSONObject(i).get("type").toString(),
+						getValueXML("", ""),
+						readJson(campos.getJSONObject(i).get("nestedFields").toString()));
+				}
+			}else{
+				if(campos.getJSONObject(i).get("type").equals("ddm-separator")){
+					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+							"selection_break",
+							"",
+							"");
+				}
+				else{
+				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+						campos.getJSONObject(i).get("type").toString(),
+						getValueXML("", ""),
+						"");
+				}
+			}
+			
+		}
+		System.out.println("xmlFinal");
+		System.out.println(xmlFinal);
+		return xmlFinal;
+	}
+	
+	
+	public String readJson(String nested) throws JSONException{
+		JSONArray campos = JSONFactoryUtil.createJSONArray(nested);
+		String xmlFinal = "";
+		for (int i = 0; i < campos.length(); i++) {
+			if(campos.getJSONObject(i).get("nestedFields")!=null){
+				if(campos.getJSONObject(i).get("type").equals("ddm-separator")){
+					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+							"selection_break",
+							"",
+							readJson(campos.getJSONObject(i).get("nestedFields").toString()));
+		
+				}
+				else{
+				
+				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+						campos.getJSONObject(i).get("type").toString(),
+						getValueXML("", ""),
+						readJson(campos.getJSONObject(i).get("nestedFields").toString()));
+				}
+			}else{
+				if(campos.getJSONObject(i).get("type").equals("ddm-separator")){
+					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+							"selection_break",
+							"",
+							"");
+				}
+				else{
+				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+						campos.getJSONObject(i).get("type").toString(),
+						getValueXML("", ""),
+						"");
+				}
+			}
+		}
+		return xmlFinal;
+		}
+	
+	
+	  public String getBaseXML(String name,String type,String values,String child){
+	  return"<dynamic-element name=\""+name+"\" instance-id=\""+getInstance()+"\" type=\""+type+"\" index-type=\"keyword\">"+ values + child + "</dynamic-element>";
+	  } 
+	
+	public JSONArray example(long ddmStructureId) throws PortalException{
+		
+		DDMStructure ddmStructure = DDMStructureLocalServiceUtil.getStructure(
+				ddmStructureId);
+
+			DDMForm ddmForm = ddmStructure.getDDMForm();
+
+			Map<String, DDMFormField> ddmFormFieldsMap =
+				ddmForm.getDDMFormFieldsMap(true);
+			
+			System.out.println(itStructure(ddmFormFieldsMap));
+			return itStructure(ddmFormFieldsMap);
+	}
+	
+	public JSONArray itStructure(Map<String, DDMFormField> ddmFormFieldsMap){
+		JSONArray array =JSONFactoryUtil.createJSONArray();
+		JSONObject structureObject =null;
+		for (Map.Entry<String, DDMFormField> entry : ddmFormFieldsMap.entrySet()) {
+			structureObject = JSONFactoryUtil.createJSONObject();
+			structureObject.put("name", entry.getKey());
+			structureObject.put("type", entry.getValue().getType());
+			structureObject.put("localizable", entry.getValue().isLocalizable());
+			structureObject.put("repetible", entry.getValue().isRepeatable());
+			Locale locale = new Locale("en", "US");
+			structureObject.put("label", entry.getValue().getLabel().getString(locale));
+			structureObject.put("aviableLocales", entry.getValue().getLabel().getAvailableLocales());
+			System.out.println(entry.getKey());
+		    System.out.println(entry.getValue().getType());	    
+			if(entry.getValue().getNestedDDMFormFieldsMap()!=null){
+				if(!itStructure(entry.getValue().getNestedDDMFormFieldsMap()).isNull(0))
+				structureObject.put("child",itStructure(entry.getValue().getNestedDDMFormFieldsMap()));
+			}
+			array.put(structureObject);
+	
+		}
+		
+		return array;
+
+	}
+	
+	
+	
+	
+	public JSONArray itStructureParse(Map<String, DDMFormField> ddmFormFieldsMap){
+		JSONArray array =JSONFactoryUtil.createJSONArray();
+		JSONObject structureObject =null;
+		for (Map.Entry<String, DDMFormField> entry : ddmFormFieldsMap.entrySet()) {
+			structureObject = JSONFactoryUtil.createJSONObject();
+			structureObject.put("name", entry.getKey());
+			structureObject.put("type", entry.getValue().getType());
+			structureObject.put("localizable", entry.getValue().isLocalizable());
+			structureObject.put("repetible", entry.getValue().isRepeatable());
+			Locale locale = new Locale("en", "US");
+			structureObject.put("label", entry.getValue().getLabel().getString(locale));
+			structureObject.put("aviableLocales", entry.getValue().getLabel().getAvailableLocales());
+			System.out.println(entry.getKey());
+		    System.out.println(entry.getValue().getType());	    
+			if(entry.getValue().getNestedDDMFormFieldsMap()!=null){
+				if(!itStructure(entry.getValue().getNestedDDMFormFieldsMap()).isNull(0))
+				structureObject.put("child",itStructure(entry.getValue().getNestedDDMFormFieldsMap()));
+			}
+			array.put(structureObject);
+	
+		}
+		
+		return array;
+
+	}
+	
+   public String setCDATA(String data){
+     return "<![CDATA["+data+"]]>";
+   }
+
+   public StringBuilder getInstance(){
+   StringBuilder instanceId = new StringBuilder(8);
+   String key = PwdGenerator.KEY1 + PwdGenerator.KEY2 + PwdGenerator.KEY3;
+     for (int i = 0; i< 8; i++) {
+            int pos = (int)Math.floor(Math.random() * key.length());
+            instanceId.append(key.charAt(pos));
+        }
+     return instanceId;
+   }
+ 
+  
+   public String getValueXML(String value_ES,String value_EN){
+	     return "<dynamic-content language-id=\"es_ES\">"+setCDATA(value_ES)+"</dynamic-content>" +
+	    		"<dynamic-content language-id=\"en_US\">"+setCDATA(value_ES)+"</dynamic-content>";
+
+	   } 
+   
+   
+   
 	@Activate
 	@Modified
 	public void activate(Map<String, Object> properties) {

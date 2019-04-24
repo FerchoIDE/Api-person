@@ -9,8 +9,10 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
 
 import com.consistent.service.application.LiferayServices.JournalArticleServices;
+import com.consistent.service.application.LiferayServices.QueriesLiferayApi;
 import com.consistent.service.application.models.Files;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.portal.kernel.exception.PortalException;
@@ -111,12 +113,22 @@ public class StructureRest {
 	}
 	}
 	
+	/**
+	 * @param groupId
+	 * @param idStructure
+	 * @return
+	 * @throws PortalException
+	 */
 	@GET
 	@Path("/getStructuresBygroupIdAndID")
-	@Produces("application/json")
+	@Produces(MediaType.APPLICATION_XML)
 	public String getStructuresBygroupIdAndID(@QueryParam("groupId") Long groupId,
-											 @QueryParam("idStructure") Long idStructure) {
-    List<DDMStructure>  structures = _services.getStructureByID(new Long(idStructure),new Long(groupId));
+											 @QueryParam("idStructure") Long idStructure) throws PortalException {
+   
+		
+	QueriesLiferayApi api = new QueriesLiferayApi();
+	return api.parseJsonToXML(idStructure);
+   /* List<DDMStructure>  structures = _services.getStructureByID(new Long(idStructure),new Long(groupId));
 	if(structures.size()>0){
 	return structures.toString();
 	}
@@ -124,7 +136,7 @@ public class StructureRest {
 	log.error("Not Found Structures");
 	return"Not Found Structures";
 	}
-	}
+	}*/
 
-	
+	}
 }
