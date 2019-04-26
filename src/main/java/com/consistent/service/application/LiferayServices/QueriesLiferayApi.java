@@ -1,13 +1,9 @@
 package com.consistent.service.application.LiferayServices;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Modified;
 
 import com.consistent.service.application.models.Contants;
 import com.liferay.document.library.kernel.model.DLFileEntry;
@@ -18,8 +14,6 @@ import com.liferay.dynamic.data.mapping.model.DDMForm;
 import com.liferay.dynamic.data.mapping.model.DDMFormField;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalServiceUtil;
-import com.liferay.dynamic.data.mapping.storage.Fields;
-import com.liferay.dynamic.data.mapping.util.DDMUtil;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.journal.model.JournalFolder;
 import com.liferay.journal.model.impl.JournalArticleImpl;
@@ -27,7 +21,6 @@ import com.liferay.journal.model.impl.JournalFolderImpl;
 import com.liferay.journal.service.JournalArticleLocalServiceUtil;
 import com.liferay.journal.service.JournalArticleResourceLocalServiceUtil;
 import com.liferay.journal.service.JournalFolderLocalServiceUtil;
-import com.liferay.portal.configuration.metatype.bnd.util.ConfigurableUtil;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
@@ -44,6 +37,7 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
 import com.liferay.portal.kernel.util.PwdGenerator;
+import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 public class QueriesLiferayApi {
@@ -98,6 +92,7 @@ public class QueriesLiferayApi {
 	
 	@SuppressWarnings("unchecked")
 	public List<com.consistent.service.application.models.Files> getFoldersAndFiles(Long groupId,Long parent,String type) throws PortalException{
+		@SuppressWarnings("rawtypes")
 		QueryDefinition queryDefinition = new QueryDefinition(WorkflowConstants.STATUS_ANY, QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
 		List<Object> foldersAndFileEntriesAndFileShortcuts= DLFolderLocalServiceUtil.getFoldersAndFileEntriesAndFileShortcuts(groupId, parent, null, true, queryDefinition);
 		for (Object folderAndFileEntryAndFileShortcut: foldersAndFileEntriesAndFileShortcuts) {
@@ -376,17 +371,14 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 							"selection_break",
 							"",
 							readJson(campos.getJSONObject(i).get("nestedFields").toString()));
-		
-				}
-				else{
-				
-				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
+		}else{
+					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
 						campos.getJSONObject(i).get("type").toString(),
 						getValueXML("", ""),
 						readJson(campos.getJSONObject(i).get("nestedFields").toString()));
-				}
-			}else{
-				if(campos.getJSONObject(i).get("type").equals("ddm-separator")){
+			}
+		}else{
+			if(campos.getJSONObject(i).get("type").equals("ddm-separator")){
 					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
 							"selection_break",
 							"",
@@ -539,40 +531,37 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 
 	   } 
    
-   
-   
-	@Activate
-	@Modified
-	public void activate(Map<String, Object> properties) {
-	
-		System.out.println("Configuración actualizada  " + new Date().toString());
-		
-		_configuration = ConfigurableUtil.createConfigurable(com.consistent.service.application.config.ConfigPersonalizacionApi.class, properties);
-		
-		if (_configuration != null) {
-			Contants.STRUCTURE_IDS=_configuration.StructureId();
-			Contants.DLFILEENTRY_BASE=_configuration.DLFileEntryFolderBase();
-			Contants.JOURNAL_HOTEL=_configuration.JournalFolderHotelBase();
-			for (String iterable_element : Contants.STRUCTURE_IDS) {
-				System.out.println("Registro actual en la configuración, info="+iterable_element);
-
-			}
-			for (String iterable_element : Contants.DLFILEENTRY_BASE) {
-				System.out.println("Registro actual en la configuración, info="+iterable_element);
-
-			}
-			for (String iterable_element : Contants.JOURNAL_HOTEL) {
-				System.out.println("Registro actual en la configuración, info="+iterable_element);
-
-			}
-			
-		} else {
-			System.out.println("No hay datos en la configuración inicial");
+	public List<JournalArticleImpl> getWCByCode(Long groupId,String structureId,String code) throws PortalException{
+		DynamicQuery queryJournal = DynamicQueryFactoryUtil.forClass(com.liferay.journal.model.impl.JournalArticleImpl.class, "journalArticle",PortalClassLoaderUtil.getClassLoader());
+		queryJournal.add(RestrictionsFactoryUtil.ilike("content", new StringBuilder("%><![CDATA[").append(code).append("]]></dynamic-content>%").toString()));
+		queryJournal.add( RestrictionsFactoryUtil.eq("groupId",new Long(groupId)));
+		queryJournal.add(PropertyFactoryUtil.forName("DDMStructureKey").eq(new String(structureId)));
+		List<com.liferay.journal.model.impl.JournalArticleImpl> journalResults =JournalArticleLocalServiceUtil.dynamicQuery(queryJournal);		
+		if(journalResults.size()>0){
+		return journalResults;
 		}
+		return new ArrayList<>();
 	}
-
-    private volatile com.consistent.service.application.config.ConfigPersonalizacionApi _configuration;
- 
+	
+	
+	public List<JournalArticle> getFoldersWCByCode(Long groupId,String nameStructure,String code) throws PortalException{
+		List<JournalArticle> journalArray = new ArrayList<>();
+		List<DDMStructure> structureKey = getStruct("%>"+nameStructure+"<%", groupId);
+				if(getWCByCode(groupId,structureKey.get(0).getStructureKey(),code)!= null && !getWCByCode(groupId,structureKey.get(0).getStructureKey(),code).isEmpty()){
+					for (JournalArticle ja : getWCByCode(groupId,structureKey.get(0).getStructureKey(),code)) {
+							 if(JournalArticleLocalServiceUtil.isLatestVersion(groupId, ja.getArticleId(), ja.getVersion())){
+					    		 journalArray.add(ja);
+					    	 }else{
+					    		 journalArray.add(JournalArticleLocalServiceUtil.getLatestArticle(ja.getResourcePrimKey()));
+					    	 }
+					}	
+				}
+			
+		return journalArray;
+	}
+	
+	
+	
 	
 	
 }

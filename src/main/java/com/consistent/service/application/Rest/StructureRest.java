@@ -11,10 +11,15 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import org.osgi.service.component.annotations.Reference;
+
 import com.consistent.service.application.LiferayServices.JournalArticleServices;
 import com.consistent.service.application.LiferayServices.QueriesLiferayApi;
+import com.consistent.service.application.LiferayServices.VocabularyApi;
 import com.consistent.service.application.models.Files;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
+import com.liferay.journal.model.JournalArticle;
+import com.liferay.journal.model.impl.JournalArticleImpl;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
@@ -28,7 +33,17 @@ public class StructureRest {
 	private static final Log log = LogFactoryUtil.getLog(StructureRest.class);
 
 	static com.consistent.service.application.LiferayServices.JournalArticleServices _services = new JournalArticleServices();
+	static QueriesLiferayApi _api = new QueriesLiferayApi();
 	
+	
+	
+	@GET
+	@Path("/getCategories")
+	@Produces("application/json")
+	public String getVocabulary(@QueryParam("groupId") Long groupId) throws PortalException {
+		VocabularyApi _vocabulary = new VocabularyApi();
+		return _vocabulary.getVocabulariesByGroup(groupId).toJSONString();
+	}
 
 	@GET
 	@Path("/getStructuresBygroupId")
@@ -121,13 +136,19 @@ public class StructureRest {
 	 */
 	@GET
 	@Path("/getStructuresBygroupIdAndID")
-	@Produces(MediaType.APPLICATION_XML)
+	@Produces("application/json")
 	public String getStructuresBygroupIdAndID(@QueryParam("groupId") Long groupId,
-											 @QueryParam("idStructure") Long idStructure) throws PortalException {
+											 @QueryParam("idStructure") String idStructure,
+											 @QueryParam("code") String code) throws PortalException {
    
 		
-	QueriesLiferayApi api = new QueriesLiferayApi();
-	return api.parseJsonToXML(idStructure);
+	
+	
+   for (JournalArticle iterable_element :  _services.searchWebContentByCodeHotelFirstLevel(groupId,idStructure, code)) {
+	System.out.println(iterable_element);
+}	
+   return _services.searchWebContentByCodeHotelFirstLevel(groupId,idStructure, code).toString();
+	//	return api.parseJsonToXML(idStructure);
    /* List<DDMStructure>  structures = _services.getStructureByID(new Long(idStructure),new Long(groupId));
 	if(structures.size()>0){
 	return structures.toString();
@@ -139,4 +160,32 @@ public class StructureRest {
 	}*/
 
 	}
+	
+	@GET
+	@Path("/getCategories")
+	@Produces("application/json")
+	public String getVocabulary1(@QueryParam("groupId") Long groupId) throws PortalException {
+		VocabularyApi _vocabulary = new VocabularyApi();
+		return _vocabulary.getVocabulariesByGroup(groupId).toJSONString();
+	}
+
+	
+	@GET
+	@Path("/getListJournalFolders")
+	@Produces("application/json")
+	public String getListJournalFolders(@QueryParam("groupId") Long groupId,
+									    @QueryParam("brand") String brand,
+									    @QueryParam("code_hotel") String code_hotel) throws PortalException {
+    return  _services.getListJournalFolders(groupId, brand, code_hotel).toJSONString();
+	}
+	
+	
+	@GET
+	@Path("/getListJournalFoldersByCode")
+	@Produces("application/json")
+	public String getListJournalFoldersByCode(@QueryParam("groupId") Long groupId,
+											  @QueryParam("codeBrand") Long codeBrand) throws PortalException {
+    return  _services.getListJournalFoldersByCode(groupId, codeBrand).toJSONString();
+	}
+	
 }

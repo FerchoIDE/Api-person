@@ -329,6 +329,83 @@ public class JournalArticleServices {
 				
 		}
 		
+		
+		/**
+	     * Método getListJournalFoldersByCode
+	     * @param groupId Id del sítio
+	     * @param codeBrand codigo carpeta donde se hace la búsqueda
+	     * @return <ul>
+	     *  <li>case 1: code_hotel!=null && brand!=null JSONArray </li>
+	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
+	     *  <li>case 1: code_hotel!=null && brand!=null JSONArray </li>
+	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
+	     *  </ul>
+	     */
+		public JSONArray getListJournalFoldersByCode(Long groupId,Long codeBrand) throws PortalException{
+			JSONArray filesArray=JSONFactoryUtil.createJSONArray();
+			if(getJournalFoldersJson(groupId, codeBrand, filesArray)!= null){
+				return getFoldersJson(groupId, codeBrand, filesArray);
+			}
+			return filesArray; 
+		}
+		/**
+	     * Método getListJournalFoldersByCode
+	     * @param groupId Id del sítio
+	     * @param codeBrand codigo carpeta donde se hace la búsqueda
+	     * @return <ul>
+	     *  <li>case 1: code_hotel!=null && brand!=null JSONArray </li>
+	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
+	     *  <li>case 1: code_hotel!=null && brand!=null JSONArray </li>
+	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
+	     *  </ul>
+	     */
+
+		
+		//busqueda recursiva de webcontents x M y CH getAllWCAndJournalFolder((portletGroupId,"AQUA","","AQC");
+		/**
+	     * getWCByFolder
+	     */
+		public List<JournalArticle> getWCByFolder(Long groupId,Long folderId) throws PortalException{
+			List<JournalArticle> journalArray= new ArrayList<>();
+			if(folderId!=null && groupId!=null){
+				journalArray=getJournalFoldersAndWC(groupId, folderId, journalArray);
+				if(query.getWCByJournalFolder(groupId, folderId)!=null){
+				for (JournalArticle journal : query.getWCByJournalFolder(groupId, folderId)) {
+						journalArray.add(journal);
+				}
+				}
+				return journalArray;
+				
+			}
+			return new ArrayList<>();
+			}
+		/**
+	     * Método createFolderNestedFolderId
+	     * @param groupId Id del sítio
+	     * @param brand Nombre de la carpeta marca donde se hace la búsqueda
+	     * @param type tipo de archivo a buscar(No se filtra)
+	     * @param code_hotel Nombre de la carpeta códifgo de hotel para la búsqueda
+	     * @return <ul>
+	     *  <li>case 1: code_hotel!=null && brand!=null JSONArray </li>
+	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
+	     *  <li>case 1: code_hotel!=null && brand!=null JSONArray </li>
+	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
+	     *  </ul>
+	     */
+		public JSONArray createFolderNestedFolderId(Long userId,Long groupId,Long parentFolderId,String name) throws PortalException{
+			ServiceContext serviceContext = new ServiceContext();
+			serviceContext.setScopeGroupId(groupId);
+			JSONArray filesArray=JSONFactoryUtil.createJSONArray();
+			JSONObject filesObject =JSONFactoryUtil.createJSONObject();
+			JournalFolder object = JournalFolderLocalServiceUtil.addFolder(userId, groupId, parentFolderId, name, name, serviceContext);			
+			filesObject.put("folderId", object.getFolderId());
+			filesObject.put("nameFolder", object.getName());
+			filesArray.put(filesObject);
+			return filesArray; 
+		}
+		
+		
+		
 		/**
 	     * Método getWCByName
 	     * @param groupId Id del sítio
@@ -342,7 +419,7 @@ public class JournalArticleServices {
 	     *  <li>case 2: brand!=null && code_hotel==null JSONArray </li>
 	     *  </ul>
 	     */
-		public JSONArray getWCByName(Long groupId,String brand,String name,String code_hotel) throws PortalException{
+		public JSONArray getWCByName(Long groupId,String brand,String code_hotel,String name) throws PortalException{
 			JSONArray filesArray=JSONFactoryUtil.createJSONArray();
 			long id_base=getRootFolderByConfiguration(groupId);
 			if(code_hotel!=null && brand!=null){
@@ -535,6 +612,29 @@ public class JournalArticleServices {
 				
 				
 			}
+			
+			
+			
+			
+				
+				/**
+			     * Método searchWebContentByCodeHotel, Búsqueda a primer nivel,si existe devuelve el webcontent,sino un array vacio
+			     * @param groupId Id del sítio
+			     * @param folderId Id de la carpeta marca donde se hace la búsqueda
+			     * @param code Código de hotel para la búsqueda
+			     * @return <ul>
+			     *  <li>Resultados de la búsqueda List<JournalArticle></li>
+			     *  </ul>
+			     */
+					public List<JournalArticle> searchWebContentByCodeHotelFirstLevel(Long groupId,String structureName,String code) throws PortalException{
+						if(query.getFoldersWCByCode(groupId, structureName, code)!=null){
+							return query.getFoldersWCByCode(groupId, structureName, code);
+						}else{
+							return new ArrayList<>();
+						}	
+					}
+			
+			
 	/*****************Manejo de webcontents******************/
 			/**
 		     * Método getWCByName
@@ -564,7 +664,7 @@ public class JournalArticleServices {
 		return valid_structures;
 		}
 		return new ArrayList<>();
-		    }
+}
 			
 /*************************Termina la sección de llamados***************************/
 		
