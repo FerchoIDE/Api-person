@@ -7,6 +7,7 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 
 @Path("/folder")
 public class FolderJournalArticleRest {
+	@SuppressWarnings("unused")
 	private static final Log log = LogFactoryUtil.getLog(FolderJournalArticleRest.class);
 
 	

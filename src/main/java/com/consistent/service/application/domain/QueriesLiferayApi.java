@@ -1,6 +1,7 @@
-package com.consistent.service.application.LiferayServices;
+package com.consistent.service.application.domain;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -13,6 +14,7 @@ import com.liferay.document.library.kernel.service.DLFolderLocalServiceUtil;
 import com.liferay.dynamic.data.mapping.model.DDMForm;
 import com.liferay.dynamic.data.mapping.model.DDMFormField;
 import com.liferay.dynamic.data.mapping.model.DDMStructure;
+import com.liferay.dynamic.data.mapping.model.DDMTemplate;
 import com.liferay.dynamic.data.mapping.service.DDMStructureLocalServiceUtil;
 import com.liferay.journal.model.JournalArticle;
 import com.liferay.journal.model.JournalFolder;
@@ -24,8 +26,6 @@ import com.liferay.journal.service.JournalFolderLocalServiceUtil;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.QueryDefinition;
-import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
@@ -35,9 +35,9 @@ import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.service.ServiceContext;
 import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
 import com.liferay.portal.kernel.util.PwdGenerator;
-import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 public class QueriesLiferayApi {
@@ -90,26 +90,7 @@ public class QueriesLiferayApi {
 	}
 	
 	
-	@SuppressWarnings("unchecked")
-	public List<com.consistent.service.application.models.Files> getFoldersAndFiles(Long groupId,Long parent,String type) throws PortalException{
-		@SuppressWarnings("rawtypes")
-		QueryDefinition queryDefinition = new QueryDefinition(WorkflowConstants.STATUS_ANY, QueryUtil.ALL_POS, QueryUtil.ALL_POS, null);
-		List<Object> foldersAndFileEntriesAndFileShortcuts= DLFolderLocalServiceUtil.getFoldersAndFileEntriesAndFileShortcuts(groupId, parent, null, true, queryDefinition);
-		for (Object folderAndFileEntryAndFileShortcut: foldersAndFileEntriesAndFileShortcuts) {
-			if (folderAndFileEntryAndFileShortcut instanceof DLFileEntry) {
-		    	DLFileEntry fileEntry = (DLFileEntry)folderAndFileEntryAndFileShortcut;	
-		      
-		    }
-			else if (folderAndFileEntryAndFileShortcut instanceof DLFolder) {
-		    	DLFolder subFolder = (DLFolder) folderAndFileEntryAndFileShortcut;
-	
-		        if(subFolder!=null){
-		        	getFoldersAndFiles(groupId, subFolder.getFolderId(), type);
-		        }
-		    } 
-	     }
-		 return new ArrayList<>();
-	}
+
 	
 	  public List<JournalFolderImpl> getRateFolder1(long parentFolder,String nameFolder,Long siteID){
 		DynamicQuery query_journal_folder = DynamicQueryFactoryUtil.forClass(com.liferay.journal.model.impl.JournalFolderImpl.class, "journalFolder",PortalClassLoaderUtil.getClassLoader());
@@ -156,7 +137,7 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 	return journalfolderResults.get(0);
 }
 
-	public List<JournalArticleImpl> getWCByJournalFolderAndType(Long groupId,Long folderId,String structureKey) throws PortalException{
+	public List<JournalArticleImpl> getWCByJournalFolderAndTypeStructure(Long groupId,Long folderId,String structureKey) throws PortalException{
 		DynamicQuery queryJournal = DynamicQueryFactoryUtil.forClass(com.liferay.journal.model.impl.JournalArticleImpl.class, "journalArticle",PortalClassLoaderUtil.getClassLoader());
 		queryJournal.add(RestrictionsFactoryUtil.eq("DDMStructureKey", structureKey));
 		queryJournal.add( RestrictionsFactoryUtil.eq("folderId", new Long(folderId)));
@@ -351,18 +332,42 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 	
 	
 	
-	/*public String validateType(){
-		
-	}*/
+	public String validateType(String key){
+		switch (key) {
+		case "ddm-text-html":
+		return "text_area";
+		case "checkbox":
+		return "boolean";
+		case "select":
+		return "list";
+		default:
+		return key;
+		}
+	}
 	
+	public JournalArticle insertWebContent(Long folderId,
+										   Long userId,
+										   Long groupId,
+										   Locale locale,String xml, String title,long folder, DDMStructure ddmStructure1, DDMTemplate ddmTemplate1)
+			throws PortalException {
+		Map<Locale, String> titleMap = new HashMap<Locale, String>();
+		titleMap.put(locale, title);
+		Map<Locale, String> descriptionMap = new HashMap<Locale, String>();
+		descriptionMap.put(locale, title);
+		ServiceContext serviceContext = new ServiceContext();
+		serviceContext.setScopeGroupId(groupId);
+		serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
+		JournalArticle objectSave = JournalArticleLocalServiceUtil.addArticle(userId,
+				groupId, folderId, titleMap, null, xml,
+				ddmStructure1.getStructureKey(), ddmTemplate1.getTemplateKey(), serviceContext);
+		return objectSave;
+	}
 	
-	public String parseJsonToXML(long ddmStructureId) throws PortalException{
-		DDMStructure ddmStructure = DDMStructureLocalServiceUtil.getStructure(
-				ddmStructureId);
-		String definition = ddmStructure.getDefinition();
-		JSONObject jsonObj = JSONFactoryUtil.createJSONObject(definition);
+	public String parseJsonToXML(String code) throws PortalException{
+		JSONObject jsonObj = JSONFactoryUtil.createJSONObject(code);
+		System.out.println(jsonObj.toJSONString());
+		System.out.println(jsonObj.get("folderId"));
 		JSONArray campos = jsonObj.getJSONArray("fields");
-		System.out.println("Tamaño: "+campos.length());
 		String xmlFinal = "";
 		for (int i = 0; i < campos.length(); i++) {
 			if(campos.getJSONObject(i).get("nestedFields")!=null){
@@ -370,11 +375,14 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
 							"selection_break",
 							"",
+							campos.getJSONObject(i).get("indexType").toString(),
 							readJson(campos.getJSONObject(i).get("nestedFields").toString()));
 		}else{
-					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
-						campos.getJSONObject(i).get("type").toString(),
-						getValueXML("", ""),
+					xmlFinal = xmlFinal + getBaseXML(campos.getJSONObject(i).get("name").toString(),
+						validateType(campos.getJSONObject(i).get("type").toString()),
+						evaluateContent(campos.getJSONObject(i).get("type").toString()
+								, campos.getJSONObject(i).getJSONArray("values")),
+						campos.getJSONObject(i).get("indexType").toString(),
 						readJson(campos.getJSONObject(i).get("nestedFields").toString()));
 			}
 		}else{
@@ -382,12 +390,15 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
 							"selection_break",
 							"",
+							campos.getJSONObject(i).get("indexType").toString(),
 							"");
 				}
 				else{
 				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
-						campos.getJSONObject(i).get("type").toString(),
-						getValueXML("", ""),
+						validateType(campos.getJSONObject(i).get("type").toString()),
+						evaluateContent(campos.getJSONObject(i).get("type").toString()
+								, campos.getJSONObject(i).getJSONArray("values")),
+						campos.getJSONObject(i).get("indexType").toString(),
 						"");
 				}
 			}
@@ -408,14 +419,17 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
 							"selection_break",
 							"",
+							campos.getJSONObject(i).get("indexType").toString(),
 							readJson(campos.getJSONObject(i).get("nestedFields").toString()));
 		
 				}
 				else{
 				
 				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
-						campos.getJSONObject(i).get("type").toString(),
-						getValueXML("", ""),
+						validateType(campos.getJSONObject(i).get("type").toString()),
+						evaluateContent(campos.getJSONObject(i).get("type").toString()
+								, campos.getJSONObject(i).getJSONArray("values")),
+						campos.getJSONObject(i).get("indexType").toString(),
 						readJson(campos.getJSONObject(i).get("nestedFields").toString()));
 				}
 			}else{
@@ -423,12 +437,15 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 					xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
 							"selection_break",
 							"",
+							campos.getJSONObject(i).get("indexType").toString(),
 							"");
 				}
 				else{
 				xmlFinal = xmlFinal +getBaseXML(campos.getJSONObject(i).get("name").toString(),
-						campos.getJSONObject(i).get("type").toString(),
-						getValueXML("", ""),
+						validateType(campos.getJSONObject(i).get("type").toString()),
+						evaluateContent(campos.getJSONObject(i).get("type").toString()
+								, campos.getJSONObject(i).getJSONArray("values")),
+						campos.getJSONObject(i).get("indexType").toString(),
 						"");
 				}
 			}
@@ -437,8 +454,8 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 		}
 	
 	
-	  public String getBaseXML(String name,String type,String values,String child){
-	  return"<dynamic-element name=\""+name+"\" instance-id=\""+getInstance()+"\" type=\""+type+"\" index-type=\"keyword\">"+ values + child + "</dynamic-element>";
+	  public String getBaseXML(String name,String type,String values,String indexType,String child){
+	  return"<dynamic-element name=\""+name+"\" instance-id=\""+getInstance()+"\" type=\""+type+"\" index-type=\""+indexType+"\">"+ values + child + "</dynamic-element>";
 	  } 
 	
 	public JSONArray example(long ddmStructureId) throws PortalException{
@@ -531,6 +548,47 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 
 	   } 
    
+   
+   
+   public String evaluateContent(String type,JSONArray values){
+	   String xml="";
+	  	switch (type) {
+		case "ddm-text-html":
+			if(values.getJSONObject(0).get("en_US")!=null && values.getJSONObject(0).get("es_ES")!=null)
+				xml+= "<dynamic-content language-id=\"es_ES\">"+setCDATA(values.getJSONObject(0).get("en_US").toString())+"</dynamic-content>" +
+			    		"<dynamic-content language-id=\"en_US\">"+setCDATA(values.getJSONObject(0).get("es_ES").toString())+"</dynamic-content>";
+		return xml;
+		case "checkbox":
+			if(values.getJSONObject(0).get("en_US")!=null && values.getJSONObject(0).get("es_ES")!=null)
+				xml+= "<dynamic-content language-id=\"es_ES\">"+setCDATA(values.getJSONObject(0).get("en_US").toString())+"</dynamic-content>" +
+			    		"<dynamic-content language-id=\"en_US\">"+setCDATA(values.getJSONObject(0).get("es_ES").toString())+"</dynamic-content>";
+		return xml;
+		case "ddm-journal-article":
+			if(values.getJSONObject(0).get("en_US")!=null && values.getJSONObject(0).get("es_ES")!=null)
+				xml+= "<dynamic-content language-id=\"es_ES\">"+setCDATA(values.getJSONObject(0).get("en_US").toString())+"</dynamic-content>" +
+			    		"<dynamic-content language-id=\"en_US\">"+setCDATA(values.getJSONObject(0).get("es_ES").toString())+"</dynamic-content>";
+		return xml;
+		case "select":
+			String options_en="";
+			String options_es="";
+			for (int i = 0; i < values.length(); i++) {
+				if(values.getJSONObject(i).get("en_US")!=null && values.getJSONObject(i).get("es_ES")!=null)
+					options_en+= "<option>"+setCDATA(values.getJSONObject(i).get("en_US").toString())+"</option>";
+				    options_es+= "<option>"+setCDATA(values.getJSONObject(i).get("es_ES").toString())+"</option>";
+						
+		}
+		xml="<dynamic-content language-id=\"en_US\">"+options_en+"</dynamic-content>"+
+			"<dynamic-content language-id=\"es_ES\">"+options_es+"</dynamic-content>";
+		return xml;
+		default:
+		if(values.getJSONObject(0).get("en_US")!=null && values.getJSONObject(0).get("es_ES")!=null)
+		xml+= "<dynamic-content language-id=\"es_ES\">"+setCDATA(values.getJSONObject(0).get("en_US").toString())+"</dynamic-content>" +
+		      "<dynamic-content language-id=\"en_US\">"+setCDATA(values.getJSONObject(0).get("es_ES").toString())+"</dynamic-content>";
+		return xml;
+		}
+	 
+   } 
+   
 	public List<JournalArticleImpl> getWCByCode(Long groupId,String structureId,String code) throws PortalException{
 		DynamicQuery queryJournal = DynamicQueryFactoryUtil.forClass(com.liferay.journal.model.impl.JournalArticleImpl.class, "journalArticle",PortalClassLoaderUtil.getClassLoader());
 		queryJournal.add(RestrictionsFactoryUtil.ilike("content", new StringBuilder("%><![CDATA[").append(code).append("]]></dynamic-content>%").toString()));
@@ -560,7 +618,23 @@ public JournalFolderImpl getJournalFolderByName(Long siteID,Long parentFolder,St
 		return journalArray;
 	}
 	
-	
+	public List<DDMStructure> getStructureByName(String nameStructure,Long siteID) {
+		DynamicQuery query = DDMStructureLocalServiceUtil.dynamicQuery()
+                 .add(PropertyFactoryUtil.forName("name").like("%>"+nameStructure+"<%"))
+                 .add(PropertyFactoryUtil.forName("groupId").eq(new Long(siteID)));
+        List<DDMStructure> structures = DDMStructureLocalServiceUtil.dynamicQuery(query);
+        List<DDMStructure> valid_structures = new ArrayList<DDMStructure>();
+        for (DDMStructure ddmStructure : structures) {
+        	if(validStructure(ddmStructure.getStructureId())){
+        		valid_structures.add(ddmStructure);
+        	}
+		}
+        if (valid_structures.size() > 0) {
+        	log.info("Estrucruras Validas:"+valid_structures.size() );
+            return valid_structures;
+        }
+        return new ArrayList<>();
+    }
 	
 	
 	

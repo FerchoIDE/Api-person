@@ -1,4 +1,4 @@
-package com.consistent.service.application.LiferayServices;
+package com.consistent.service.application.domain;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,24 +10,20 @@ import com.liferay.asset.kernel.service.AssetCategoryLocalServiceUtil;
 import com.liferay.asset.kernel.service.AssetVocabularyLocalServiceUtil;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.QueryDefinition;
-import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSONArray;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
-import com.liferay.portal.kernel.workflow.WorkflowConstants;
 
 public class VocabularyApi {
 
 	private AssetCategoryLocalService _category;
 	
 	public VocabularyApi() {
-		
-		AssetCategoryLocalService category = AssetCategoryLocalServiceUtil.getService();
-		this._category=category;
+	AssetCategoryLocalService category = AssetCategoryLocalServiceUtil.getService();
+	this._category=category;
 		
 	}
 	
@@ -50,6 +46,7 @@ public class VocabularyApi {
 				categoryObject=JSONFactoryUtil.createJSONObject();
 				categoryObject.put("category", listCategories.get(i).getName());
 				categoryObject.put("key", listCategories.get(i).getPrimaryKey());
+				categoryObject.put("key", listCategories.get(i));
 				if(getSubCategories(listCategories.get(i).getPrimaryKey()) != null && !getSubCategories(listCategories.get(i).getPrimaryKey()).isNull(0)){
 					categoryObject.put("nested", getSubCategories(listCategories.get(i).getPrimaryKey()));
 				}

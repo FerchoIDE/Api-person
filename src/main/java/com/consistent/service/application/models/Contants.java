@@ -1,7 +1,5 @@
 package com.consistent.service.application.models;
 
-import java.util.List;
-
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 
