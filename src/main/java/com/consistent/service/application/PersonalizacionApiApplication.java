@@ -18,6 +18,7 @@ public class PersonalizacionApiApplication extends Application {
 	public Set<Object> getSingletons() {
 		Set<Object> singletons = new HashSet<Object>();
 		singletons.add(new com.consistent.service.application.Rest.StructureRest());
+		singletons.add(new com.consistent.service.application.Rest.FolderJournalArticleRest());
 		return singletons;
 	}
 
